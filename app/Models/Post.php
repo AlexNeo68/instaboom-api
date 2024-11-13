@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Enums\LikeState;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * 
+ *
  *
  * @property int $id
  * @property int|null $user_id
@@ -57,6 +58,39 @@ class Post extends Model
     public function likes(): HasMany
     {
         return $this->hasMany(Like::class);
+    }
+
+    public function totalLikes(): int
+    {
+        return $this->likes()->count();
+    }
+
+    public function isLiked(): bool
+    {
+        return Like::query()
+            ->wherePostId($this->id)
+            ->whereUserId(auth()->user()->id)
+            ->exists();
+    }
+
+    public function like(): LikeState
+    {
+        $like = Like::query()
+            ->wherePostId($this->id)
+            ->whereUserId(auth()->id())
+            ->first();
+
+        if (is_null($like)) {
+            $this->likes()->create([
+                'user_id' => auth()->id(),
+            ]);
+
+            return LikeState::Liked;
+        }
+
+        $like->delete();
+
+        return LikeState::Unliked;
     }
 
 }
